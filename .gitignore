@@ -1,0 +1,22 @@
+# Virtual Environments
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Hugging Face Models
+models/
+*.safetensors
+*.bin
+
+# macOS Specific
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
