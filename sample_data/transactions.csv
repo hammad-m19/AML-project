@@ -1,0 +1,16 @@
+item1,item2,item3,item4
+Bread,Milk,Eggs,
+Bread,Butter,Jam,
+Milk,Butter,Cheese,
+Bread,Milk,Butter,Jam
+Eggs,Milk,Bread,
+Butter,Jam,Bread,
+Milk,Bread,Eggs,Butter
+Cheese,Butter,Milk,
+Bread,Jam,Milk,
+Milk,Butter,Bread,Eggs
+Jam,Bread,Butter,
+Milk,Eggs,Bread,
+Butter,Milk,Cheese,
+Bread,Milk,Jam,Butter
+Eggs,Butter,Milk,
