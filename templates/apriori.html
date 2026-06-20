@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Apriori Mining | AML Project{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <h1>Apriori — Association Rules Mining</h1>
+  <p>Upload a transaction dataset and discover frequent itemsets and association rules interactively.</p>
+  <a class="btn btn-outline" href="{{ url_for('download_sample', filename='transactions.csv') }}">Download Sample Transactions</a>
+</section>
+
+<div class="workflow">
+  <div class="panel">
+    <h2>1. Upload Transaction Dataset</h2>
+    <p class="hint">Each row represents a transaction; each cell is an item purchased.</p>
+    <form id="apriori-form" enctype="multipart/form-data">
+      <input type="file" id="apriori-file" name="file" accept=".csv">
+      <div class="form-row-inline">
+        <div class="form-row">
+          <label for="min-support">Min Support</label>
+          <input type="number" id="min-support" name="min_support" value="0.3" min="0" max="1" step="0.05">
+        </div>
+        <div class="form-row">
+          <label for="min-confidence">Min Confidence</label>
+          <input type="number" id="min-confidence" name="min_confidence" value="0.5" min="0" max="1" step="0.05">
+        </div>
+        <div class="form-row">
+          <label for="min-lift">Min Lift</label>
+          <input type="number" id="min-lift" name="min_lift" value="1.0" min="0.1" max="10" step="0.1">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Run Apriori Algorithm</button>
+    </form>
+    <div id="apriori-status" class="status-msg"></div>
+  </div>
+</div>
+
+<div id="apriori-results" style="display:none;">
+  <div class="panel">
+    <h2>Mining Summary</h2>
+    <div id="apriori-summary" class="metrics-grid"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Frequent Itemsets</h2>
+    <div id="itemsets-table"></div>
+    <div id="itemsets-chart" class="chart-box"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Association Rules</h2>
+    <div id="rules-table"></div>
+    <div id="rules-chart" class="chart-box"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('apriori-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const status = document.getElementById('apriori-status');
+    const fileInput = document.getElementById('apriori-file');
+    if (!fileInput.files.length) { status.innerHTML = '<span class="error">Please select a CSV file.</span>'; return; }
+
+    status.innerHTML = '<span class="loading">Running Apriori algorithm...</span>';
+    const formData = new FormData(e.target);
+
+    try {
+      const res = await fetch('/api/run-apriori', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.error) { status.innerHTML = `<span class="error">${data.error}</span>`; return; }
+      status.innerHTML = '<span class="success">Mining complete!</span>';
+      renderAprioriResults(data.results);
+    } catch (err) {
+      status.innerHTML = `<span class="error">${err.message}</span>`;
+    }
+  });
+
+  function renderAprioriResults(results) {
+    document.getElementById('apriori-results').style.display = 'block';
+
+    document.getElementById('apriori-summary').innerHTML = `
+      <div class="metric-card"><span class="metric-value">${results.transaction_count}</span><span class="metric-label">Transactions</span></div>
+      <div class="metric-card"><span class="metric-value">${results.item_count}</span><span class="metric-label">Unique Items</span></div>
+      <div class="metric-card"><span class="metric-value">${results.frequent_itemsets.length}</span><span class="metric-label">Frequent Itemsets</span></div>
+      <div class="metric-card"><span class="metric-value">${results.rules.length}</span><span class="metric-label">Association Rules</span></div>
+    `;
+
+    if (results.message) {
+      document.getElementById('itemsets-table').innerHTML = `<p class="hint">${results.message}</p>`;
+      return;
+    }
+
+    document.getElementById('itemsets-table').innerHTML =
+      '<table class="data-table"><thead><tr><th>Itemset</th><th>Support</th></tr></thead><tbody>' +
+      results.frequent_itemsets.map(i =>
+        `<tr><td>${i.itemsets.join(', ')}</td><td>${i.support}</td></tr>`
+      ).join('') + '</tbody></table>';
+
+    if (results.frequent_itemsets.length) {
+      Plotly.newPlot('itemsets-chart', [{
+        x: results.frequent_itemsets.map(i => i.itemsets.join(' + ')),
+        y: results.frequent_itemsets.map(i => i.support),
+        type: 'bar',
+        marker: { color: '#6366f1' }
+      }], { title: 'Frequent Itemsets by Support', margin: { t: 40, b: 120 } }, { responsive: true });
+    }
+
+    if (results.rules.length) {
+      document.getElementById('rules-table').innerHTML =
+        '<table class="data-table"><thead><tr><th>Antecedents</th><th>Consequents</th><th>Support</th><th>Confidence</th><th>Lift</th></tr></thead><tbody>' +
+        results.rules.map(r =>
+          `<tr><td>${r.antecedents.join(', ')}</td><td>${r.consequents.join(', ')}</td><td>${r.support}</td><td>${r.confidence}</td><td>${r.lift}</td></tr>`
+        ).join('') + '</tbody></table>';
+
+      Plotly.newPlot('rules-chart', [{
+        x: results.rules.map((_, i) => `Rule ${i+1}`),
+        y: results.rules.map(r => r.lift),
+        type: 'bar',
+        name: 'Lift',
+        marker: { color: '#10b981' }
+      }, {
+        x: results.rules.map((_, i) => `Rule ${i+1}`),
+        y: results.rules.map(r => r.confidence),
+        type: 'bar',
+        name: 'Confidence',
+        marker: { color: '#3b82f6' }
+      }], { title: 'Association Rules — Lift & Confidence', barmode: 'group', margin: { t: 40 } }, { responsive: true });
+    } else {
+      document.getElementById('rules-table').innerHTML = '<p class="hint">No rules met the confidence/lift thresholds. Try lowering min_confidence or min_lift.</p>';
+    }
+  }
+</script>
+{% endblock %}

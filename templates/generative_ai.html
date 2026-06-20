@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Generative AI | AML Project{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <h1>Generative AI (Transformers Model)</h1>
+  <p>Explore transformer-based NLP capabilities: Question Answering, Text Generation, and Named Entity Recognition.</p>
+</section>
+
+<div class="card-grid card-grid-3">
+  <a href="{{ url_for('voice_qa') }}" class="card card-genai">
+    <h2>Question Answering</h2>
+    <p>Voice-in / voice-out QA using DistilBERT on SQuAD. Provide context and ask questions naturally.</p>
+    <span class="card-tag">Voice + Text</span>
+  </a>
+  <a href="{{ url_for('text_generation') }}" class="card card-genai">
+    <h2>Text Generation</h2>
+    <p>Enter a text prompt and generate creative continuations with DistilGPT-2 transformer model.</p>
+    <span class="card-tag">Text In / Text Out</span>
+  </a>
+  <a href="{{ url_for('ner_page') }}" class="card card-genai">
+    <h2>Named Entity Recognition</h2>
+    <p>Identify persons, organizations, and locations in text using BERT-based NER pipeline.</p>
+    <span class="card-tag">NER Pipeline</span>
+  </a>
+</div>
+
+<section class="section">
+  <div class="panel">
+    <h2>Quick Demo: Text Generation</h2>
+    <div class="form-row">
+      <label for="demo-prompt">Prompt</label>
+      <textarea id="demo-prompt" rows="3" placeholder="The future of artificial intelligence is">The future of artificial intelligence is</textarea>
+    </div>
+    <button id="demo-generate-btn" class="btn btn-primary">Generate Text</button>
+    <div id="demo-output" class="output-box" style="display:none;"></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="panel">
+    <h2>About Transformer Models Used</h2>
+    <table class="data-table">
+      <thead>
+        <tr><th>Task</th><th>Model</th><th>Architecture</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Question Answering</td><td>distilbert-base-cased-distilled-squad</td><td>DistilBERT</td></tr>
+        <tr><td>Text Generation</td><td>distilgpt2</td><td>DistilGPT-2 (Decoder)</td></tr>
+        <tr><td>Named Entity Recognition</td><td>dslim/bert-base-NER</td><td>BERT Token Classification</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('demo-generate-btn').addEventListener('click', async () => {
+    const prompt = document.getElementById('demo-prompt').value.trim();
+    const output = document.getElementById('demo-output');
+    if (!prompt) { alert('Enter a prompt.'); return; }
+    output.style.display = 'block';
+    output.innerHTML = '<span class="loading">Generating...</span>';
+    try {
+      const res = await fetch('/api/text-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, max_length: 100 })
+      });
+      const data = await res.json();
+      if (data.error) { output.innerHTML = `<span class="error">${data.error}</span>`; return; }
+      output.innerHTML = data.generated_texts.map(t => `<p>${t}</p>`).join('');
+    } catch (e) {
+      output.innerHTML = `<span class="error">${e.message}</span>`;
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Machine Learning | AML Project{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <h1>Machine Learning Algorithms</h1>
+  <p>Upload a CSV, select a target column and algorithm, then view metrics and interactive charts.</p>
+  <a class="btn btn-outline" href="{{ url_for('download_sample', filename='iris.csv') }}">Download Sample (Iris)</a>
+</section>
+
+<div class="workflow">
+  <div class="panel">
+    <h2>1. Upload Dataset</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+      <input type="file" id="csv-file" name="file" accept=".csv" required>
+      <button type="submit" class="btn btn-primary">Upload &amp; Analyze</button>
+    </form>
+    <div id="upload-status" class="status-msg"></div>
+  </div>
+
+  <div class="panel" id="config-panel" style="display:none;">
+    <h2>2. Configure Model</h2>
+    <div class="form-row">
+      <label for="target-column">Target Column</label>
+      <select id="target-column"></select>
+    </div>
+    <div class="form-row">
+      <label for="algorithm">Algorithm</label>
+      <select id="algorithm">
+        <option value="logistic_regression">Logistic Regression (Classification)</option>
+        <option value="random_forest">Random Forest (Classification/Regression)</option>
+        <option value="svm">Support Vector Machine (Classification)</option>
+        <option value="linear_regression">Linear Regression (Regression)</option>
+        <option value="random_forest_regressor">Random Forest Regressor</option>
+        <option value="kmeans">K-Means Clustering (Unsupervised)</option>
+      </select>
+    </div>
+    <div class="form-row" id="kmeans-row" style="display:none;">
+      <label for="n-clusters">Number of Clusters</label>
+      <input type="number" id="n-clusters" value="3" min="2" max="10">
+    </div>
+    <button id="run-ml-btn" class="btn btn-primary">Run Model</button>
+  </div>
+</div>
+
+<div id="analysis-section" style="display:none;">
+  <div class="panel">
+    <h2>Data Analysis &amp; Preprocessing</h2>
+    <div id="dataset-summary" class="summary-grid"></div>
+    <div id="missing-chart" class="chart-box"></div>
+    <div id="correlation-chart" class="chart-box"></div>
+  </div>
+</div>
+
+<div id="results-section" style="display:none;">
+  <div class="panel">
+    <h2>Model Results</h2>
+    <div id="metrics-display" class="metrics-grid"></div>
+    <div id="confusion-chart" class="chart-box"></div>
+    <div id="feature-chart" class="chart-box"></div>
+    <div id="prediction-chart" class="chart-box"></div>
+    <div id="cluster-chart" class="chart-box"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initCsvWorkflow({
+    uploadEndpoint: '/api/upload',
+    runEndpoint: '/api/run-ml',
+    mode: 'ml'
+  });
+</script>
+{% endblock %}

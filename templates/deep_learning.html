@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Deep Learning | AML Project{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <h1>Deep Learning Algorithms</h1>
+  <p>Train a feed-forward neural network on your tabular CSV data with live training visualization.</p>
+  <a class="btn btn-outline" href="{{ url_for('download_sample', filename='housing.csv') }}">Download Sample (Housing)</a>
+</section>
+
+<div class="workflow">
+  <div class="panel">
+    <h2>1. Upload Dataset</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+      <input type="file" id="csv-file" name="file" accept=".csv" required>
+      <button type="submit" class="btn btn-primary">Upload &amp; Analyze</button>
+    </form>
+    <div id="upload-status" class="status-msg"></div>
+  </div>
+
+  <div class="panel" id="config-panel" style="display:none;">
+    <h2>2. Configure Neural Network</h2>
+    <div class="form-row">
+      <label for="target-column">Target Column</label>
+      <select id="target-column"></select>
+    </div>
+    <div class="form-row">
+      <label for="epochs">Epochs</label>
+      <input type="number" id="epochs" value="30" min="5" max="100">
+    </div>
+    <div class="form-row">
+      <label for="batch-size">Batch Size</label>
+      <input type="number" id="batch-size" value="32" min="8" max="128">
+    </div>
+    <button id="run-dl-btn" class="btn btn-primary">Train Neural Network</button>
+  </div>
+</div>
+
+<div id="analysis-section" style="display:none;">
+  <div class="panel">
+    <h2>Data Analysis &amp; Preprocessing</h2>
+    <div id="dataset-summary" class="summary-grid"></div>
+    <div id="missing-chart" class="chart-box"></div>
+    <div id="correlation-chart" class="chart-box"></div>
+  </div>
+</div>
+
+<div id="results-section" style="display:none;">
+  <div class="panel">
+    <h2>Training Results</h2>
+    <div id="metrics-display" class="metrics-grid"></div>
+    <div id="training-chart" class="chart-box"></div>
+    <div id="confusion-chart" class="chart-box"></div>
+    <div id="prediction-chart" class="chart-box"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  initCsvWorkflow({
+    uploadEndpoint: '/api/upload',
+    runEndpoint: '/api/run-dl',
+    mode: 'dl'
+  });
+</script>
+{% endblock %}

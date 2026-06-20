@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Home | AML Project{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>Applied Machine Learning Portal</h1>
+  <p class="subtitle">Upload datasets, preprocess data, train models, and visualize results interactively.</p>
+</section>
+
+<div class="card-grid">
+  <a href="{{ url_for('ml_algorithms') }}" class="card card-ml">
+    <div class="card-icon">&#129504;</div>
+    <h2>Machine Learning Algorithms</h2>
+    <p>Logistic Regression, Random Forest, SVM, Linear Regression, K-Means Clustering</p>
+    <span class="card-tag">CSV Upload</span>
+  </a>
+
+  <a href="{{ url_for('deep_learning') }}" class="card card-dl">
+    <div class="card-icon">&#129302;</div>
+    <h2>Deep Learning Algorithms</h2>
+    <p>Feed-forward Neural Networks for classification and regression with training curves</p>
+    <span class="card-tag">CSV Upload</span>
+  </a>
+
+  <a href="{{ url_for('generative_ai') }}" class="card card-genai">
+    <div class="card-icon">&#10024;</div>
+    <h2>Generative AI (Transformers)</h2>
+    <p>Transformer-powered text analysis on tabular exports plus dedicated NLP modules</p>
+    <span class="card-tag">Transformers</span>
+  </a>
+</div>
+
+<section class="section">
+  <h2>Required Functional Models</h2>
+  <div class="card-grid card-grid-4">
+    <a href="{{ url_for('voice_qa') }}" class="card card-sm">
+      <h3>Voice Question Answering</h3>
+      <p>Speak questions, get spoken answers using DistilBERT QA</p>
+    </a>
+    <a href="{{ url_for('text_generation') }}" class="card card-sm">
+      <h3>Text Generation</h3>
+      <p>Generate text continuations with DistilGPT-2</p>
+    </a>
+    <a href="{{ url_for('ner_page') }}" class="card card-sm">
+      <h3>Named Entity Recognition</h3>
+      <p>Extract persons, organizations, locations with BERT-NER</p>
+    </a>
+    <a href="{{ url_for('apriori_page') }}" class="card card-sm">
+      <h3>Apriori Mining</h3>
+      <p>Discover association rules from transaction datasets</p>
+    </a>
+  </div>
+</section>
+{% endblock %}

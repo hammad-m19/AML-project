@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AML Project{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <a href="{{ url_for('index') }}">AML Project Portal</a>
+    </div>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('ml_algorithms') }}" {% if request.endpoint == 'ml_algorithms' %}class="active"{% endif %}>ML Algorithms</a></li>
+      <li><a href="{{ url_for('deep_learning') }}" {% if request.endpoint == 'deep_learning' %}class="active"{% endif %}>Deep Learning</a></li>
+      <li><a href="{{ url_for('generative_ai') }}" {% if request.endpoint == 'generative_ai' %}class="active"{% endif %}>Generative AI</a></li>
+      <li class="nav-divider"></li>
+      <li><a href="{{ url_for('voice_qa') }}" {% if request.endpoint == 'voice_qa' %}class="active"{% endif %}>Voice QA</a></li>
+      <li><a href="{{ url_for('text_generation') }}" {% if request.endpoint == 'text_generation' %}class="active"{% endif %}>Text Gen</a></li>
+      <li><a href="{{ url_for('ner_page') }}" {% if request.endpoint == 'ner_page' %}class="active"{% endif %}>NER</a></li>
+      <li><a href="{{ url_for('apriori_page') }}" {% if request.endpoint == 'apriori_page' %}class="active"{% endif %}>Apriori</a></li>
+    </ul>
+  </nav>
+
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <p>Applied Machine Learning Project &mdash; Data Preprocessing, Model Execution &amp; Interactive Visualization</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

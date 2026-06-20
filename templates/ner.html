@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}NER | AML Project{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <h1>Named Entity Recognition (Transformers)</h1>
+  <p>Extract named entities (Person, Organization, Location) from text using BERT-based NER pipeline.</p>
+</section>
+
+<div class="panel">
+  <h2>Input Text</h2>
+  <textarea id="ner-text" rows="5">Apple Inc. was founded by Steve Jobs in Cupertino, California. Tim Cook is the current CEO of Apple. Microsoft is headquartered in Redmond, Washington.</textarea>
+  <button id="ner-btn" class="btn btn-primary">Extract Entities</button>
+</div>
+
+<div id="ner-results" class="panel" style="display:none;">
+  <h2>Recognized Entities</h2>
+  <div id="ner-highlight" class="ner-highlight"></div>
+  <div id="ner-table-wrap"></div>
+  <div id="ner-chart" class="chart-box"></div>
+</div>
+
+<div class="panel">
+  <h2>Entity Legend</h2>
+  <div class="ner-legend">
+    <span class="ner-tag ner-per">PER — Person</span>
+    <span class="ner-tag ner-org">ORG — Organization</span>
+    <span class="ner-tag ner-loc">LOC — Location</span>
+    <span class="ner-tag ner-misc">MISC — Miscellaneous</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const entityColors = { PER: '#3b82f6', ORG: '#8b5cf6', LOC: '#10b981', MISC: '#f59e0b' };
+
+  document.getElementById('ner-btn').addEventListener('click', async () => {
+    const text = document.getElementById('ner-text').value.trim();
+    if (!text) { alert('Enter text to analyze.'); return; }
+
+    const results = document.getElementById('ner-results');
+    results.style.display = 'block';
+    document.getElementById('ner-highlight').innerHTML = '<span class="loading">Analyzing...</span>';
+
+    try {
+      const res = await fetch('/api/ner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.error) {
+        document.getElementById('ner-highlight').innerHTML = `<span class="error">${data.error}</span>`;
+        return;
+      }
+
+      // Highlighted text
+      let highlighted = text;
+      const sorted = [...data.entities].sort((a, b) => b.start - a.start);
+      sorted.forEach(ent => {
+        const label = ent.entity.replace('B-', '').replace('I-', '');
+        const color = entityColors[label] || '#64748b';
+        highlighted = highlighted.slice(0, ent.start) +
+          `<mark style="background:${color}33;border-bottom:2px solid ${color}">${ent.word}</mark>` +
+          highlighted.slice(ent.end);
+      });
+      document.getElementById('ner-highlight').innerHTML = highlighted;
+
+      // Table
+      const table = `<table class="data-table"><thead><tr><th>Entity</th><th>Label</th><th>Score</th><th>Position</th></tr></thead><tbody>` +
+        data.entities.map(e => `<tr><td>${e.word}</td><td>${e.entity}</td><td>${e.score}</td><td>${e.start}-${e.end}</td></tr>`).join('') +
+        '</tbody></table>';
+      document.getElementById('ner-table-wrap').innerHTML = table;
+
+      // Chart
+      const counts = {};
+      data.entities.forEach(e => {
+        const label = e.entity.replace('B-', '').replace('I-', '');
+        counts[label] = (counts[label] || 0) + 1;
+      });
+      Plotly.newPlot('ner-chart', [{
+        x: Object.keys(counts),
+        y: Object.values(counts),
+        type: 'bar',
+        marker: { color: Object.keys(counts).map(k => entityColors[k] || '#64748b') }
+      }], { title: 'Entity Type Distribution', margin: { t: 40 } }, { responsive: true });
+
+    } catch (e) {
+      document.getElementById('ner-highlight').innerHTML = `<span class="error">${e.message}</span>`;
+    }
+  });
+</script>
+{% endblock %}
