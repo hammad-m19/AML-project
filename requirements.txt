@@ -56,7 +56,6 @@ rich==15.0.0
 safetensors==0.7.0
 scikit-learn==1.6.1
 scipy==1.13.1
-seaborn==0.13.2
 six==1.17.0
 sympy==1.14.0
 tensorboard==2.20.0
