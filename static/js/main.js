@@ -9,8 +9,10 @@ function initCsvWorkflow(config) {
   const kmeansRow = document.getElementById('kmeans-row');
 
   if (algorithmSelect && kmeansRow) {
+    const dbscanRow = document.getElementById('dbscan-row');
     algorithmSelect.addEventListener('change', () => {
       kmeansRow.style.display = algorithmSelect.value === 'kmeans' ? 'block' : 'none';
+      if (dbscanRow) dbscanRow.style.display = algorithmSelect.value === 'dbscan' ? 'block' : 'none';
     });
   }
 
@@ -71,7 +73,9 @@ function renderAnalysis(summary) {
   `;
 
   const missingCols = Object.keys(summary.missing_values).filter(k => summary.missing_values[k] > 0);
+  const missingChartEl = document.getElementById('missing-chart');
   if (missingCols.length) {
+    missingChartEl.style.display = 'block';
     Plotly.newPlot('missing-chart', [{
       x: missingCols,
       y: missingCols.map(c => summary.missing_percent[c]),
@@ -85,7 +89,7 @@ function renderAnalysis(summary) {
       margin: { t: 40 }
     }, { responsive: true });
   } else {
-    document.getElementById('missing-chart').innerHTML = '<p class="hint">No missing values detected.</p>';
+    missingChartEl.style.display = 'none';
   }
 
   const corrKeys = Object.keys(summary.correlation);
@@ -113,6 +117,15 @@ async function runModel(config) {
   resultsSection.style.display = 'block';
   metricsDisplay.innerHTML = '<span class="loading">Training model...</span>';
 
+  // Hide and clear all charts before running
+  ['confusion-chart', 'feature-chart', 'prediction-chart', 'cluster-chart', 'training-chart'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.innerHTML = '';
+      el.style.display = 'none';
+    }
+  });
+
   const payload = { session_id: currentSessionId };
 
   if (config.mode === 'ml') {
@@ -121,10 +134,16 @@ async function runModel(config) {
     if (payload.algorithm === 'kmeans') {
       payload.n_clusters = parseInt(document.getElementById('n-clusters').value);
     }
+    if (payload.algorithm === 'dbscan') {
+      payload.eps = parseFloat(document.getElementById('eps').value);
+      payload.min_samples = parseInt(document.getElementById('min-samples').value);
+    }
   } else {
     payload.target_column = document.getElementById('target-column').value;
     payload.epochs = parseInt(document.getElementById('epochs').value);
     payload.batch_size = parseInt(document.getElementById('batch-size').value);
+    const archSelect = document.getElementById('architecture');
+    if (archSelect) payload.architecture = archSelect.value;
   }
 
   try {
@@ -175,6 +194,7 @@ function renderResults(results, mode) {
 
   if (results.feature_importance) {
     const indices = results.feature_importance.map((_, i) => `F${i + 1}`);
+    document.getElementById('feature-chart').style.display = 'block';
     Plotly.newPlot('feature-chart', [{
       x: indices.slice(0, 20),
       y: results.feature_importance.slice(0, 20),
@@ -199,22 +219,27 @@ function renderResults(results, mode) {
       traces.push({ x: h.accuracy.map((_, i) => i + 1), y: h.accuracy, name: 'Training Acc', type: 'scatter', yaxis: 'y2' });
       traces.push({ x: h.val_accuracy.map((_, i) => i + 1), y: h.val_accuracy, name: 'Val Acc', type: 'scatter', yaxis: 'y2' });
     }
-    Plotly.newPlot('training-chart', traces, {
+    document.getElementById('training-chart').style.display = 'block';
+    const trainingLayout = {
       title: 'Training History',
       paper_bgcolor: 'transparent',
       plot_bgcolor: 'transparent',
       font: { color: '#f1f5f9' },
       xaxis: { title: 'Epoch' },
       yaxis: { title: 'Loss' },
-      yaxis2: h.accuracy ? { title: 'Accuracy', overlaying: 'y', side: 'right' } : undefined,
       margin: { t: 40 }
-    }, { responsive: true });
+    };
+    if (h.accuracy) {
+      trainingLayout.yaxis2 = { title: 'Accuracy', overlaying: 'y', side: 'right' };
+    }
+    Plotly.newPlot('training-chart', traces, trainingLayout, { responsive: true });
   }
 }
 
 function renderConfusionMatrix(cm, labels) {
   const el = document.getElementById('confusion-chart');
   if (!el || !cm.length) return;
+  el.style.display = 'block';
   const n = cm.length;
   const lbls = labels || Array.from({ length: n }, (_, i) => `Class ${i}`);
   Plotly.newPlot('confusion-chart', [{
@@ -229,6 +254,8 @@ function renderConfusionMatrix(cm, labels) {
 }
 
 function renderPredictionChart(predictions) {
+  const el = document.getElementById('prediction-chart');
+  if (el) el.style.display = 'block';
   Plotly.newPlot('prediction-chart', [
     { x: predictions.actual, y: predictions.predicted, mode: 'markers', type: 'scatter', name: 'Predictions', marker: { color: '#6366f1' } },
     { x: [Math.min(...predictions.actual), Math.max(...predictions.actual)], y: [Math.min(...predictions.actual), Math.max(...predictions.actual)], mode: 'lines', name: 'Ideal', line: { dash: 'dash', color: '#94a3b8' } }
@@ -246,6 +273,8 @@ function renderPredictionChart(predictions) {
 function renderClusterChart(labels) {
   const counts = {};
   labels.forEach(l => { counts[l] = (counts[l] || 0) + 1; });
+  const el = document.getElementById('cluster-chart');
+  if (el) el.style.display = 'block';
   Plotly.newPlot('cluster-chart', [{
     x: Object.keys(counts).map(k => `Cluster ${k}`),
     y: Object.values(counts),

@@ -1,32 +1,14 @@
 """Classical machine learning model runners."""
 
 import numpy as np
-from sklearn.cluster import KMeans
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.cluster import DBSCAN, KMeans
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
-    confusion_matrix,
     mean_absolute_error,
     mean_squared_error,
     r2_score,
     silhouette_score,
 )
-from sklearn.svm import SVC
-
-
-def _classification_metrics(y_test, y_pred, label_encoder):
-    acc = accuracy_score(y_test, y_pred)
-    cm = confusion_matrix(y_test, y_pred).tolist()
-    labels = label_encoder.classes_.tolist() if label_encoder else None
-    report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
-    return {
-        "accuracy": round(float(acc), 4),
-        "confusion_matrix": cm,
-        "classification_report": report,
-        "labels": labels,
-    }
 
 
 def _regression_metrics(y_test, y_pred):
@@ -45,50 +27,32 @@ def run_ml_pipeline(preprocessed, algorithm):
     X_test = preprocessed["X_test"]
     y_train = preprocessed["y_train"]
     y_test = preprocessed["y_test"]
-    label_encoder = preprocessed["label_encoder"]
 
     results = {"algorithm": algorithm, "task_type": task_type}
 
     if algorithm == "kmeans":
-        from utils.data_preprocessing import preprocess_for_clustering
-
         raise ValueError("Use run_clustering for K-Means.")
 
-    if task_type == "classification":
-        models = {
-            "logistic_regression": LogisticRegression(max_iter=1000, random_state=42),
-            "random_forest": RandomForestClassifier(n_estimators=100, random_state=42),
-            "svm": SVC(kernel="rbf", random_state=42),
-        }
-        if algorithm not in models:
-            raise ValueError(f"Unknown classification algorithm: {algorithm}")
-        model = models[algorithm]
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        results["metrics"] = _classification_metrics(y_test, y_pred, label_encoder)
-        if hasattr(model, "feature_importances_"):
-            results["feature_importance"] = model.feature_importances_.tolist()
-        elif hasattr(model, "coef_"):
-            results["feature_importance"] = np.abs(model.coef_[0]).tolist()
-    else:
-        models = {
-            "linear_regression": LinearRegression(),
-            "random_forest_regressor": RandomForestRegressor(n_estimators=100, random_state=42),
-        }
-        if algorithm not in models:
-            raise ValueError(f"Unknown regression algorithm: {algorithm}")
-        model = models[algorithm]
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        results["metrics"] = _regression_metrics(y_test, y_pred)
-        results["predictions"] = {
-            "actual": [round(float(v), 4) for v in y_test[:50]],
-            "predicted": [round(float(v), 4) for v in y_pred[:50]],
-        }
-        if hasattr(model, "feature_importances_"):
-            results["feature_importance"] = model.feature_importances_.tolist()
+    if algorithm == "dbscan":
+        raise ValueError("Use run_dbscan for DBSCAN.")
 
-    results["model_name"] = algorithm.replace("_", " ").title()
+    if algorithm != "linear_regression":
+        raise ValueError(f"Unknown algorithm: {algorithm}. Available: linear_regression")
+
+    # Linear Regression (works for both regression and classification-as-regression)
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    results["task_type"] = "regression"
+    results["metrics"] = _regression_metrics(y_test, y_pred)
+    results["predictions"] = {
+        "actual": [round(float(v), 4) for v in y_test[:50]],
+        "predicted": [round(float(v), 4) for v in y_pred[:50]],
+    }
+    if hasattr(model, "coef_"):
+        results["feature_importance"] = np.abs(model.coef_).tolist()
+
+    results["model_name"] = "Linear Regression"
     return results
 
 
@@ -109,4 +73,35 @@ def run_clustering(X, n_clusters=3):
         },
         "cluster_labels": labels.tolist(),
         "cluster_centers": model.cluster_centers_.tolist(),
+    }
+
+
+def run_dbscan(X, eps=0.5, min_samples=5):
+    """Run DBSCAN clustering."""
+    model = DBSCAN(eps=eps, min_samples=min_samples)
+    labels = model.fit_predict(X)
+
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise = int(np.sum(labels == -1))
+
+    # Silhouette score only valid when we have 2+ clusters and not all noise
+    if n_clusters >= 2 and n_noise < len(labels):
+        non_noise_mask = labels != -1
+        if len(np.unique(labels[non_noise_mask])) >= 2:
+            sil = silhouette_score(X[non_noise_mask], labels[non_noise_mask])
+        else:
+            sil = 0.0
+    else:
+        sil = 0.0
+
+    return {
+        "algorithm": "dbscan",
+        "task_type": "clustering",
+        "metrics": {
+            "n_clusters": n_clusters,
+            "n_noise_points": n_noise,
+            "silhouette_score": round(float(sil), 4),
+            "total_points": int(len(labels)),
+        },
+        "cluster_labels": labels.tolist(),
     }

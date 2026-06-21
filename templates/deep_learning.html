@@ -4,7 +4,7 @@
 {% block content %}
 <section class="page-header">
   <h1>Deep Learning Algorithms</h1>
-  <p>Train a feed-forward neural network on your tabular CSV data with live training visualization.</p>
+  <p>Train ANN, LSTM, or CNN on your tabular CSV data with live training visualization.</p>
   <a class="btn btn-outline" href="{{ url_for('download_sample', filename='housing.csv') }}">Download Sample (Housing)</a>
 </section>
 
@@ -23,6 +23,14 @@
     <div class="form-row">
       <label for="target-column">Target Column</label>
       <select id="target-column"></select>
+    </div>
+    <div class="form-row">
+      <label for="architecture">Architecture</label>
+      <select id="architecture">
+        <option value="ann">ANN (Artificial Neural Network)</option>
+        <option value="lstm">LSTM (Long Short-Term Memory)</option>
+        <option value="cnn">CNN (Convolutional Neural Network)</option>
+      </select>
     </div>
     <div class="form-row">
       <label for="epochs">Epochs</label>

@@ -73,79 +73,80 @@ def _query_hf_api(prompt, max_tokens=200):
     return str(result)
 
 
-def _fallback_local_qa(question):
-    """Fallback: use local distilgpt2 if API is unavailable.
-    Uses manual token loop because pipeline/model.generate crashes on this OS/env.
-    """
-    tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
-    model = AutoModelForCausalLM.from_pretrained("distilgpt2")
-    
-    prompt = f"Question: {question}\nAnswer:"
-    inputs = tokenizer(prompt, return_tensors="pt")
-    input_ids = inputs["input_ids"]
-    attention_mask = inputs["attention_mask"]
-    
-    with torch.no_grad():
-        for _ in range(30):  # limit length to avoid slow generation
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            # Greedy decoding
-            next_token = torch.argmax(outputs.logits[:, -1, :], dim=-1).unsqueeze(-1)
-            
-            if next_token.item() == tokenizer.eos_token_id:
-                break
-                
-            input_ids = torch.cat([input_ids, next_token], dim=-1)
-            attention_mask = torch.cat([attention_mask, torch.ones((1, 1), dtype=torch.long)], dim=-1)
-            
-    text = tokenizer.decode(input_ids[0], skip_special_tokens=True)
-    if "Answer:" in text:
-        ans = text.split("Answer:")[-1].strip().split("\n")[0].strip()
-        return ans if ans else "I don't know."
-    return text[len(prompt):].strip().split("\n")[0].strip()
+@lru_cache(maxsize=1)
+def _qa_pipeline():
+    """Load a local Flan-T5 model for question answering."""
+    return pipeline(
+        "text2text-generation",
+        model="google/flan-t5-base",
+        device=DEVICE,
+        framework="pt",
+    )
 
 
 def answer_question(question, context=""):
-    """Run generative QA — uses HF Inference API, falls back to local model."""
+    """Run generative QA — uses local Flan-T5 model for reliable answers."""
 
     # Build the instruction prompt
     if context.strip():
         prompt = (
-            f"[INST] Answer the following question based on the context provided. "
+            f"Answer the following question based on the context provided. "
             f"Give a clear, detailed answer.\n\n"
             f"Context: {context.strip()}\n\n"
-            f"Question: {question.strip()} [/INST]"
+            f"Question: {question.strip()}"
         )
     else:
         prompt = (
-            f"[INST] Answer the following question clearly and in detail. "
+            f"Answer the following question clearly and in detail. "
             f"Provide accurate, factual information.\n\n"
-            f"Question: {question.strip()} [/INST]"
+            f"Question: {question.strip()}"
         )
 
     try:
-        answer_text = _query_hf_api(prompt)
-
-        # Clean up: stop at certain markers
-        for stop in ["\n\n\n", "[INST]", "</s>"]:
-            if stop in answer_text:
-                answer_text = answer_text[:answer_text.index(stop)].strip()
+        qa = _qa_pipeline()
+        result = qa(
+            prompt,
+            max_length=150,
+            do_sample=False,
+            no_repeat_ngram_size=3,
+            repetition_penalty=2.5,
+        )
+        answer_text = result[0]["generated_text"].strip() if result else ""
 
         if not answer_text:
-            raise ValueError("Empty response")
+            raise ValueError("Empty response from local model")
 
         return {
             "answer": answer_text,
-            "model": "Mistral-7B-Instruct",
+            "model": "Flan-T5",
             "mode": "contextual" if context.strip() else "open-ended",
         }
     except Exception:
-        # Fallback to local model
-        fallback_answer = _fallback_local_qa(question)
-        return {
-            "answer": fallback_answer if fallback_answer else "Could not generate an answer.",
-            "model": "distilgpt2 (local fallback)",
-            "mode": "contextual" if context.strip() else "open-ended",
-        }
+        # Fallback: try HF Inference API
+        try:
+            api_prompt = (
+                f"[INST] {prompt} [/INST]"
+            )
+            answer_text = _query_hf_api(api_prompt)
+
+            for stop in ["\n\n\n", "[INST]", "</s>"]:
+                if stop in answer_text:
+                    answer_text = answer_text[:answer_text.index(stop)].strip()
+
+            if not answer_text:
+                raise ValueError("Empty API response")
+
+            return {
+                "answer": answer_text,
+                "model": "Mistral-7B-Instruct (API)",
+                "mode": "contextual" if context.strip() else "open-ended",
+            }
+        except Exception:
+            return {
+                "answer": "Could not generate an answer. Please try again.",
+                "model": "unavailable",
+                "mode": "contextual" if context.strip() else "open-ended",
+            }
 
 
 def generate_text(prompt, max_length=120, num_return_sequences=1):

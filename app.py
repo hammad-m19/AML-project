@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 from utils.apriori_mining import run_apriori
 from utils.data_preprocessing import analyze_dataset, load_csv, preprocess_for_clustering, preprocess_for_supervised
 from utils.dl_models import run_dl_pipeline
-from utils.ml_models import run_clustering, run_ml_pipeline
+from utils.ml_models import run_clustering, run_dbscan, run_ml_pipeline
 from utils.transformers_models import answer_question, extract_entities, generate_text
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -116,7 +116,7 @@ def api_run_ml():
     data = request.get_json(force=True)
     session_id = data.get("session_id")
     target = data.get("target_column")
-    algorithm = data.get("algorithm", "random_forest")
+    algorithm = data.get("algorithm", "linear_regression")
 
     df = _get_df(session_id)
     if df is None:
@@ -126,6 +126,14 @@ def api_run_ml():
         if algorithm == "kmeans":
             preprocessed = preprocess_for_clustering(df)
             results = run_clustering(preprocessed["X"], n_clusters=int(data.get("n_clusters", 3)))
+            results["cluster_info"] = preprocessed["info"]
+        elif algorithm == "dbscan":
+            preprocessed = preprocess_for_clustering(df)
+            results = run_dbscan(
+                preprocessed["X"],
+                eps=float(data.get("eps", 0.5)),
+                min_samples=int(data.get("min_samples", 5)),
+            )
             results["cluster_info"] = preprocessed["info"]
         else:
             if not target:
@@ -143,6 +151,7 @@ def api_run_dl():
     data = request.get_json(force=True)
     session_id = data.get("session_id")
     target = data.get("target_column")
+    architecture = data.get("architecture", "ann")
 
     df = _get_df(session_id)
     if df is None:
@@ -154,6 +163,7 @@ def api_run_dl():
         preprocessed = preprocess_for_supervised(df, target)
         results = run_dl_pipeline(
             preprocessed,
+            architecture=architecture,
             epochs=int(data.get("epochs", 30)),
             batch_size=int(data.get("batch_size", 32)),
         )
