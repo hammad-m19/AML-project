@@ -103,7 +103,13 @@
         y: results.frequent_itemsets.map(i => i.support),
         type: 'bar',
         marker: { color: '#6366f1' }
-      }], { title: 'Frequent Itemsets by Support', margin: { t: 40, b: 120 } }, { responsive: true });
+      }], {
+        title: 'Frequent Itemsets by Support',
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { color: '#f8fafc' },
+        margin: { t: 40, b: 120 }
+      }, { responsive: true });
     }
 
     if (results.rules.length) {
@@ -125,7 +131,14 @@
         type: 'bar',
         name: 'Confidence',
         marker: { color: '#3b82f6' }
-      }], { title: 'Association Rules — Lift & Confidence', barmode: 'group', margin: { t: 40 } }, { responsive: true });
+      }], {
+        title: 'Association Rules — Lift & Confidence',
+        barmode: 'group',
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { color: '#f8fafc' },
+        margin: { t: 40 }
+      }, { responsive: true });
     } else {
       document.getElementById('rules-table').innerHTML = '<p class="hint">No rules met the confidence/lift thresholds. Try lowering min_confidence or min_lift.</p>';
     }

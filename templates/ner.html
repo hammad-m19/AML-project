@@ -84,7 +84,13 @@
         y: Object.values(counts),
         type: 'bar',
         marker: { color: Object.keys(counts).map(k => entityColors[k] || '#64748b') }
-      }], { title: 'Entity Type Distribution', margin: { t: 40 } }, { responsive: true });
+      }], {
+        title: 'Entity Type Distribution',
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        font: { color: '#f8fafc' },
+        margin: { t: 40 }
+      }, { responsive: true });
 
     } catch (e) {
       document.getElementById('ner-highlight').innerHTML = `<span class="error">${e.message}</span>`;
