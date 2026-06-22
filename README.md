@@ -59,3 +59,7 @@ AML-project/
 - **Frontend:** HTML/CSS/JS, Plotly.js, Web Speech API
 - **Visualization:** Interactive Plotly charts (confusion matrix, correlation heatmap, training curves, NER distribution)
 
+to run project 
+cd "/Users/username/Documents/GitHub/AML-project" 
+source venv/bin/activate
+python app.py
